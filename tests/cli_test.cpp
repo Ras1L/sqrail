@@ -110,6 +110,7 @@ TEST_CASE("invalid and conflicting options have stable error codes", "[cli]") {
 		      [](const int argc, char **argv) { return sqrail::ParseSchema(argc, argv); });
 	});
 	CheckError("EMPTY_SQL", []() { static_cast<void>(sqrail::NormalizeQuery(" ; \n")); });
+	CheckError("EMPTY_SQL", []() { static_cast<void>(sqrail::NormalizeQuery(" ; \r\n")); });
 }
 
 TEST_CASE("query text and exact resource sizes round-trip", "[cli]") {

@@ -248,6 +248,16 @@ class CrossPlatformTest(unittest.TestCase):
         if spill.exists():
             self.assertEqual(list(spill.glob(".sqrail-spill-*")), [])
 
+    def test_crlf_sql_on_stdin(self) -> None:
+        result = invoke("run", "-", stdin=b"-- comment 1\r\nSELECT 1 AS one,\r\n--comment 2\r\n2 AS two; -- another comment")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = invoke("run", "-", stdin=b"SELECT 1 AS one; \r\n \r\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        empty_result = invoke("run", "-", stdin=b" ; \r\n")
+        self.assertNotEqual(empty_result.returncode, 0)
+        self.assertIn(b"EMPTY_SQL", empty_result.stderr, "The query must be considered empty if it contains only whitespace, semicolons, and newlines")
+
 
 if __name__ == "__main__":
     unittest.main()
