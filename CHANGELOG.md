@@ -17,6 +17,10 @@ versions follow semantic versioning.
   `QUERY_FAILED` (exit 4)
 - benchmark `summary.tsv` timing columns now read both hyperfine 1.x and 2.x
   JSON exports instead of being `null` under hyperfine 2.x
+- `--timeout` expiry and `SIGINT`/`SIGTERM` are no longer lost when they arrive
+  between DuckDB statements, such as while sqrail validates a large query;
+  DuckDB clears a pending interrupt whenever a statement starts, so sqrail now
+  repeats the request until execution stops
 
 ## [0.3.4] - 2026-08-02
 
