@@ -249,14 +249,25 @@ class CrossPlatformTest(unittest.TestCase):
             self.assertEqual(list(spill.glob(".sqrail-spill-*")), [])
 
     def test_crlf_sql_on_stdin(self) -> None:
-        result = invoke("run", "-", stdin=b"-- comment 1\r\nSELECT 1 AS one,\r\n--comment 2\r\n2 AS two; -- another comment")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        result = invoke("run", "-", stdin=b"SELECT 1 AS one; \r\n \r\n")
-        self.assertEqual(result.returncode, 0, result.stderr)
+        queries = [
+            (
+                b"-- comment 1\r\nSELECT 1 AS one,\r\n--comment 2\r\n2 AS two; -- another comment\r\n",
+                {"one": 1, "two": 2},
+            ),
+            (b"SELECT 1 AS one; \r\n \r\n", {"one": 1}),
+            (b"\r\nSELECT\r\n  'a' AS letter\r\n;\r\n\r\n", {"letter": "a"}),
+        ]
+        for sql, row in queries:
+            with self.subTest(sql=sql):
+                result = invoke("run", "-", stdin=sql)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual([json.loads(line) for line in result.stdout.splitlines()], [row])
 
-        empty_result = invoke("run", "-", stdin=b" ; \r\n")
-        self.assertNotEqual(empty_result.returncode, 0)
-        self.assertIn(b"EMPTY_SQL", empty_result.stderr, "The query must be considered empty if it contains only whitespace, semicolons, and newlines")
+        for sql in (b" ; \r\n", b"\r\n;\r\n;\r\n", b"\r\n \r\n"):
+            with self.subTest(sql=sql):
+                empty = invoke("run", "-", stdin=sql)
+                self.assertEqual(empty.returncode, 2)
+                self.assertEqual(diagnostic(empty)["code"], "EMPTY_SQL")
 
 
 if __name__ == "__main__":
